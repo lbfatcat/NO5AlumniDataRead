@@ -12,7 +12,7 @@ public class NO5AlumniDataRead {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		System.out.println("Data processed.");
+		System.out.println("Data processed. Goodbye!");
 		return;
 	}
 
