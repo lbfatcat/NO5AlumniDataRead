@@ -10,8 +10,6 @@ public class NO5AlumniDataRead {
 	File configFile;
 	File dataInfile, dataOutFile, logFile;
 	ReadStatus rs; 
-	// BufferedWriter logWriter;
-	int logLineCount=0;
 	
 	String strGrade=new String(""), 
 		   strType= new String(""), 
@@ -57,7 +55,7 @@ public class NO5AlumniDataRead {
 			return -1;
 		
 		boolean existNonEmptyChar= false;
-		int i=0;
+		int i= startIndex;
 		for(; i<line.length();i++)
 			if(this.isEmptyChar(line.charAt(i))==false)
 			{
@@ -78,7 +76,7 @@ public class NO5AlumniDataRead {
 			return -1;
 		
 		boolean existEmptyChar= false;
-		int i=0;
+		int i= startIndex;
 		for(;i<line.length();i++)
 			if(this.isEmptyChar(line.charAt(i))==true)
 			{
@@ -98,7 +96,7 @@ public class NO5AlumniDataRead {
 	{
 		BufferedReader cfgReader=null;
 		configFile= new File(configureFilePath);
-		rs= ReadStatus.S_CLASS; // 默认从届别状态开始；
+		rs= ReadStatus.S_GRADE; // 默认从届别状态开始；
 		
 		try {
 			cfgReader= new BufferedReader(new InputStreamReader(new FileInputStream(configFile)));
@@ -153,22 +151,11 @@ public class NO5AlumniDataRead {
 		return fileName;
 	}
 	
-	void writeLog(String logMsg,BufferedWriter bw)
-	{
-		try {
-			bw.write(logMsg+this.logLineCount+"\n");
-			this.logLineCount++;
-		}catch(IOException ioe) {
-			ioe.printStackTrace();
-		}
-		return;
-	}
-	
 	void extractInfo(String line, int curLineNum, BufferedWriter bwData, BufferedWriter bwLog)
 	{
 		// write log on the receiving line;
 		try {
-			bwLog.write("LINE TO PROCESS: NO."+curLineNum+line);
+			bwLog.write("LINE TO PROCESS: NO."+curLineNum+line+"\t");
 			bwLog.newLine();
 		}catch (IOException e){  
             System.out.println("Read or write Exceptioned");  
@@ -201,11 +188,10 @@ public class NO5AlumniDataRead {
 				rs= ReadStatus.S_TEACHER; // 班级名称扫描完毕，接下来进入班主任姓名扫描；
 				break;
 			case S_TEACHER:
-				int iTeacherStart= line.indexOf("班主任：	")+4;
-				if(isEmptyChar(line.charAt(line.length()-1))==false)// 班主任的姓名就是该行的结尾；
-					strTeacher= line.substring(iTeacherStart);
-				else
-					strTeacher= line.substring(iTeacherStart, line.indexOf("	"));
+				int iTeacherStart= this.findNextNonEmptyChar(line.indexOf("班主任")+4, line);
+				int iTeacherEnd= this.findNextEmptyChar(iTeacherStart, line);
+				strTeacher= line.substring(iTeacherStart, iTeacherEnd);
+				i= iTeacherEnd+1;
 				rs= ReadStatus.S_STUDENT; // 班主任名字扫描完毕，接下来进入该班级学生姓名的扫描；
 				break;
 			case S_STUDENT:
@@ -238,9 +224,9 @@ public class NO5AlumniDataRead {
 							i= this.findNextNonEmptyChar(e, line);
 						}
 						try {
-							bwData.write(this.strGrade + this.strType + this.strClass + this.strTeacher + this.strStudent);
+							bwData.write(this.strGrade + "," + this.strType + "," + this.strClass + "," + this.strTeacher + "," + this.strStudent);
 							bwData.newLine();
-							bwLog.write("Writing record: "+this.strGrade + this.strType + this.strClass + this.strTeacher + this.strStudent);
+							bwLog.write("Writing record:  "+this.strGrade + "," + this.strType + "," + this.strClass + "," + this.strTeacher + "," + this.strStudent);
 							bwLog.newLine();
 						}catch(IOException ioe) {
 							ioe.printStackTrace();
@@ -260,7 +246,7 @@ public class NO5AlumniDataRead {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		NO5AlumniDataRead cfg_no5= new NO5AlumniDataRead("configure.txt");
+		NO5AlumniDataRead cfg_no5= new NO5AlumniDataRead("data/configure.txt");
 		
 		BufferedReader dataReader=null;
 		BufferedWriter dataWriter=null;
@@ -273,12 +259,14 @@ public class NO5AlumniDataRead {
 			
 			String line="";
 			int lineCount=0;
-			cfg_no5.writeLog("Processing Start...", logWriter);
+			//cfg_no5.writeLog("Processing Start...", logWriter);
+			logWriter.write("Processing Start...");
+			logWriter.newLine();
 			
 			// 反复读取每一行，逐行提取校友相关信息；
 			while((line= dataReader.readLine())!=null)
 			{
-				cfg_no5.extractInfo(line, lineCount, dataWriter, logWriter);
+				cfg_no5.extractInfo(line, lineCount++, dataWriter, logWriter);
 			}
 			
 		}catch (FileNotFoundException e){  
